@@ -1,0 +1,13 @@
+.DS_Store
+**/.DS_Store
+*.zip
+
+# CMake and local build outputs
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Keep the existing nested repository separate from this repo
+pa1/
