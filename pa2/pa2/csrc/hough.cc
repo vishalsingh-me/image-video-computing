@@ -14,6 +14,7 @@
 
 // C++ PROJECT INCLUDES
 #include "hough/hough.h"
+#include "hough/morphology.h"
 
 
 namespace
@@ -39,6 +40,27 @@ namespace
         return ivc::get_pixel(static_cast<const ivc::GrayscaleFloatImg&>(img),
                               static_cast<int>(width_idx),
                               static_cast<int>(height_idx));
+    }
+
+    ivc::BinaryImg extract_contour(const ivc::BinaryImg& img)
+    {
+        const ivc::BinaryImg eroded = ivc::student::imerode(img, ivc::student::strel_square(3));
+        ivc::BinaryImg contour(ivc::get_height(img), ivc::get_width(img));
+        contour.setConstant(false);
+
+        for(size_t width_idx = 0; width_idx < ivc::get_width(img); ++width_idx)
+        {
+            for(size_t height_idx = 0; height_idx < ivc::get_height(img); ++height_idx)
+            {
+                ivc::set_pixel(contour,
+                               width_idx,
+                               height_idx,
+                               get_binary_pixel(img, width_idx, height_idx) &&
+                                   !get_binary_pixel(eroded, width_idx, height_idx));
+            }
+        }
+
+        return contour;
     }
 
     ivc::ParamCombination make_param_combination(const std::initializer_list<float_t>& values)
@@ -114,17 +136,6 @@ namespace
         return angle;
     }
 
-    float_t normalize_phi_degrees(const float_t phi)
-    {
-        // Internal gradient images use radians, but direct tests may query by degrees.
-        if(std::abs(phi) > (kTwoPi + 1.0f))
-        {
-            return normalize_angle_degrees(phi);
-        }
-
-        return normalize_angle_degrees(radians_to_degrees(phi));
-    }
-
     std::optional<float_t> snap_to_range(const ivc::ParamRange& range,
                                          const float_t value)
     {
@@ -188,6 +199,18 @@ namespace
         accumulator.~CooAccumulator();
         new (&accumulator) ivc::CooAccumulator(min_vals, max_vals, deltas);
     }
+
+    int quantize_phi_bin(float_t phi)
+    {
+        if(std::abs(phi) > (kTwoPi + 1.0f))
+        {
+            phi = degrees_to_radians(phi);
+        }
+
+        const float_t normalized_phi = normalize_angle_radians(phi);
+        return static_cast<int>(std::lround(radians_to_degrees(normalized_phi))) %
+               static_cast<int>(kDegreesPerCircle);
+    }
 }
 
 
@@ -213,10 +236,17 @@ namespace student
                                                                      img,
                                                                      width_idx,
                                                                      height_idx);
+                std::set<ivc::ParamCombination, ivc::ParamComb_comp_t> unique_params;
 
                 for(int col_idx = 0; col_idx < suggested_params.cols(); ++col_idx)
                 {
-                    add_vote(accumulator, suggested_params.col(col_idx));
+                    ivc::ParamCombination params = suggested_params.col(col_idx);
+                    unique_params.insert(params);
+                }
+
+                for(const ivc::ParamCombination& params : unique_params)
+                {
+                    add_vote(accumulator, params);
                 }
             }
         }
@@ -416,22 +446,17 @@ namespace student
         : _obj_img(obj_img),
           _obj_img_center_idxs(std::make_tuple(ivc::get_height(obj_img)/2, ivc::get_width(obj_img)/2))
     {
+        const ivc::BinaryImg contour = extract_contour(_obj_img);
         const ivc::GrayscaleByteImg grayscale_obj = binary_to_grayscale_byte(_obj_img);
         const ivc::GrayscaleFloatImg grad_angles = ivc::get_sobel_3x3_gradient_angles(grayscale_obj);
-        const ivc::GrayscaleFloatImg grad_magnitudes = ivc::get_sobel_3x3_gradient_magnitudes(grayscale_obj);
         const float_t center_y = static_cast<float_t>(std::get<0>(_obj_img_center_idxs));
         const float_t center_x = static_cast<float_t>(std::get<1>(_obj_img_center_idxs));
 
-        for(size_t width_idx = 0; width_idx < ivc::get_width(_obj_img); ++width_idx)
+        for(size_t width_idx = 0; width_idx < ivc::get_width(contour); ++width_idx)
         {
-            for(size_t height_idx = 0; height_idx < ivc::get_height(_obj_img); ++height_idx)
+            for(size_t height_idx = 0; height_idx < ivc::get_height(contour); ++height_idx)
             {
-                if(!get_binary_pixel(_obj_img, width_idx, height_idx))
-                {
-                    continue;
-                }
-
-                if(std::abs(get_gray_float_pixel(grad_magnitudes, width_idx, height_idx)) <= kSnapEps)
+                if(!get_binary_pixel(contour, width_idx, height_idx))
                 {
                     continue;
                 }
@@ -461,11 +486,7 @@ namespace student
 
     int RTable::quantize_phi(const float_t phi)
     {
-        const float_t normalized_phi = normalize_phi_degrees(phi);
-        const int quantized_phi = static_cast<int>(std::lround(normalized_phi));
-        return quantized_phi >= static_cast<int>(kDegreesPerCircle)
-                   ? quantized_phi - static_cast<int>(kDegreesPerCircle)
-                   : quantized_phi;
+        return quantize_phi_bin(phi);
     }
 
     ivc::ParamCombinations generalized_hough_fixed_obj(const ivc::BinaryImg& img,
@@ -485,20 +506,15 @@ namespace student
 
         ivc::BinaryImg object_copy = object_img;
         const RTable r_table(object_copy);
+        const ivc::BinaryImg contour = extract_contour(img);
         const ivc::GrayscaleByteImg grayscale_img = binary_to_grayscale_byte(img);
         const ivc::GrayscaleFloatImg grad_angles = ivc::get_sobel_3x3_gradient_angles(grayscale_img);
-        const ivc::GrayscaleFloatImg grad_magnitudes = ivc::get_sobel_3x3_gradient_magnitudes(grayscale_img);
 
-        for(size_t width_idx = 0; width_idx < ivc::get_width(img); ++width_idx)
+        for(size_t width_idx = 0; width_idx < ivc::get_width(contour); ++width_idx)
         {
-            for(size_t height_idx = 0; height_idx < ivc::get_height(img); ++height_idx)
+            for(size_t height_idx = 0; height_idx < ivc::get_height(contour); ++height_idx)
             {
-                if(!get_binary_pixel(img, width_idx, height_idx))
-                {
-                    continue;
-                }
-
-                if(std::abs(get_gray_float_pixel(grad_magnitudes, width_idx, height_idx)) <= kSnapEps)
+                if(!get_binary_pixel(contour, width_idx, height_idx))
                 {
                     continue;
                 }
@@ -506,6 +522,7 @@ namespace student
                 const float_t phi = get_gray_float_pixel(grad_angles, width_idx, height_idx);
                 const std::set<std::tuple<float_t, float_t> > r_theta_values =
                     r_table.get_r_theta_values(phi);
+                std::set<ivc::ParamCombination, ivc::ParamComb_comp_t> unique_votes;
 
                 for(const std::tuple<float_t, float_t>& r_theta : r_theta_values)
                 {
@@ -524,9 +541,13 @@ namespace student
                         continue;
                     }
 
-                    add_vote(accumulator,
-                             make_param_combination({snapped_x_center.value(),
-                                                     snapped_y_center.value()}));
+                    unique_votes.insert(make_param_combination({snapped_x_center.value(),
+                                                                snapped_y_center.value()}));
+                }
+
+                for(const ivc::ParamCombination& vote : unique_votes)
+                {
+                    add_vote(accumulator, vote);
                 }
             }
         }
@@ -553,25 +574,21 @@ namespace student
 
         ivc::BinaryImg object_copy = object_img;
         const RTable r_table(object_copy);
+        const ivc::BinaryImg contour = extract_contour(img);
         const ivc::GrayscaleByteImg grayscale_img = binary_to_grayscale_byte(img);
         const ivc::GrayscaleFloatImg grad_angles = ivc::get_sobel_3x3_gradient_angles(grayscale_img);
-        const ivc::GrayscaleFloatImg grad_magnitudes = ivc::get_sobel_3x3_gradient_magnitudes(grayscale_img);
 
-        for(size_t width_idx = 0; width_idx < ivc::get_width(img); ++width_idx)
+        for(size_t width_idx = 0; width_idx < ivc::get_width(contour); ++width_idx)
         {
-            for(size_t height_idx = 0; height_idx < ivc::get_height(img); ++height_idx)
+            for(size_t height_idx = 0; height_idx < ivc::get_height(contour); ++height_idx)
             {
-                if(!get_binary_pixel(img, width_idx, height_idx))
-                {
-                    continue;
-                }
-
-                if(std::abs(get_gray_float_pixel(grad_magnitudes, width_idx, height_idx)) <= kSnapEps)
+                if(!get_binary_pixel(contour, width_idx, height_idx))
                 {
                     continue;
                 }
 
                 const float_t target_phi = get_gray_float_pixel(grad_angles, width_idx, height_idx);
+                std::set<ivc::ParamCombination, ivc::ParamComb_comp_t> unique_votes;
 
                 for(int scale_idx = 0; scale_idx < accumulator._param_all_values[2].rows(); ++scale_idx)
                 {
@@ -579,13 +596,15 @@ namespace student
                     for(int rotation_idx = 0; rotation_idx < accumulator._param_all_values[3].rows(); ++rotation_idx)
                     {
                         const float_t rotation = accumulator._param_all_values[3](rotation_idx);
+                        const float_t effective_rotation = normalize_angle_degrees(rotation + 180.0f);
                         const std::set<std::tuple<float_t, float_t> > r_theta_values =
-                            r_table.get_r_theta_values(target_phi - degrees_to_radians(rotation));
+                            r_table.get_r_theta_values(target_phi - degrees_to_radians(effective_rotation));
 
                         for(const std::tuple<float_t, float_t>& r_theta : r_theta_values)
                         {
                             const float_t r = std::get<0>(r_theta);
-                            const float_t theta_degrees = std::get<1>(r_theta) + rotation;
+                            const float_t theta_degrees =
+                                normalize_angle_degrees(std::get<1>(r_theta) + effective_rotation);
                             const float_t theta_radians = degrees_to_radians(theta_degrees);
                             const float_t x_center = static_cast<float_t>(width_idx) +
                                                      (scale * r * std::cos(theta_radians));
@@ -601,13 +620,17 @@ namespace student
                                 continue;
                             }
 
-                            add_vote(accumulator,
-                                     make_param_combination({snapped_x_center.value(),
-                                                             snapped_y_center.value(),
-                                                             scale,
-                                                             rotation}));
+                            unique_votes.insert(make_param_combination({snapped_x_center.value(),
+                                                                        snapped_y_center.value(),
+                                                                        scale,
+                                                                        rotation}));
                         }
                     }
+                }
+
+                for(const ivc::ParamCombination& vote : unique_votes)
+                {
+                    add_vote(accumulator, vote);
                 }
             }
         }

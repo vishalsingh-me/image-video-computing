@@ -1,5 +1,6 @@
 // SYSTEM INCLUDES
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <optional>
 #include <tuple>
@@ -337,6 +338,335 @@ namespace
 
         return skeleton;
     }
+
+    bool get_binary_pixel_safe(const ivc::BinaryImg& img,
+                               const int width_idx,
+                               const int height_idx)
+    {
+        if(width_idx < 0 || height_idx < 0)
+        {
+            return false;
+        }
+
+        if(width_idx >= static_cast<int>(ivc::get_width(img)) ||
+           height_idx >= static_cast<int>(ivc::get_height(img)))
+        {
+            return false;
+        }
+
+        return ivc::get_pixel(img, width_idx, height_idx);
+    }
+
+    using ThinMask = std::array<std::array<int, 3>, 3>;
+
+    bool matches_thin_mask(const ivc::BinaryImg& img,
+                           const int width_idx,
+                           const int height_idx,
+                           const ThinMask& mask)
+    {
+        for(int row = 0; row < 3; ++row)
+        {
+            for(int col = 0; col < 3; ++col)
+            {
+                const int expected = mask[static_cast<size_t>(row)][static_cast<size_t>(col)];
+                if(expected < 0)
+                {
+                    continue;
+                }
+
+                const bool actual =
+                    get_binary_pixel_safe(img, width_idx + col - 1, height_idx + row - 1);
+                if(actual != (expected == 1))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    ivc::BinaryImg mask_thinning_skeleton(const ivc::BinaryImg& img)
+    {
+        static const std::array<ThinMask, 8> kMasks = {{
+            {{{0, 0, 0}, {-1, 1, -1}, {1, 1, 1}}},
+            {{{-1, 0, 0}, {1, 1, 0}, {-1, 1, -1}}},
+            {{{1, -1, 0}, {1, 1, 0}, {1, -1, 0}}},
+            {{{-1, 1, -1}, {1, 1, 0}, {-1, 0, 0}}},
+            {{{1, 1, 1}, {-1, 1, -1}, {0, 0, 0}}},
+            {{{-1, 1, -1}, {0, 1, 1}, {0, 0, -1}}},
+            {{{0, -1, 1}, {0, 1, 1}, {0, -1, 1}}},
+            {{{0, 0, -1}, {0, 1, 1}, {-1, 1, -1}}},
+        }};
+
+        ivc::BinaryImg out = img;
+        bool changed = true;
+
+        while(changed)
+        {
+            changed = false;
+
+            for(const ThinMask& mask : kMasks)
+            {
+                std::vector<std::tuple<size_t, size_t> > to_remove;
+
+                for(size_t width_idx = 0; width_idx < ivc::get_width(out); ++width_idx)
+                {
+                    for(size_t height_idx = 0; height_idx < ivc::get_height(out); ++height_idx)
+                    {
+                        if(!get_binary_pixel(out, width_idx, height_idx))
+                        {
+                            continue;
+                        }
+
+                        if(matches_thin_mask(out,
+                                             static_cast<int>(width_idx),
+                                             static_cast<int>(height_idx),
+                                             mask))
+                        {
+                            to_remove.emplace_back(width_idx, height_idx);
+                        }
+                    }
+                }
+
+                if(to_remove.empty())
+                {
+                    continue;
+                }
+
+                changed = true;
+                for(const std::tuple<size_t, size_t>& pixel : to_remove)
+                {
+                    ivc::set_pixel(out, std::get<0>(pixel), std::get<1>(pixel), false);
+                }
+            }
+        }
+
+        return out;
+    }
+
+    ivc::BinaryImg flip_horizontally(const ivc::BinaryImg& img)
+    {
+        ivc::BinaryImg flipped = make_binary_img(ivc::get_width(img), ivc::get_height(img), false);
+
+        for(size_t width_idx = 0; width_idx < ivc::get_width(img); ++width_idx)
+        {
+            for(size_t height_idx = 0; height_idx < ivc::get_height(img); ++height_idx)
+            {
+                ivc::set_pixel(flipped,
+                               ivc::get_width(img) - 1 - width_idx,
+                               height_idx,
+                               get_binary_pixel(img, width_idx, height_idx));
+            }
+        }
+
+        return flipped;
+    }
+
+    ivc::BinaryImg flip_vertically(const ivc::BinaryImg& img)
+    {
+        ivc::BinaryImg flipped = make_binary_img(ivc::get_width(img), ivc::get_height(img), false);
+
+        for(size_t width_idx = 0; width_idx < ivc::get_width(img); ++width_idx)
+        {
+            for(size_t height_idx = 0; height_idx < ivc::get_height(img); ++height_idx)
+            {
+                ivc::set_pixel(flipped,
+                               width_idx,
+                               ivc::get_height(img) - 1 - height_idx,
+                               get_binary_pixel(img, width_idx, height_idx));
+            }
+        }
+
+        return flipped;
+    }
+
+    ivc::BinaryImg voted_skeleton(const ivc::BinaryImg& img)
+    {
+        const ivc::BinaryImg base = mask_thinning_skeleton(img);
+        const ivc::BinaryImg mirrored_x = flip_horizontally(img);
+        const ivc::BinaryImg mirrored_y = flip_vertically(img);
+        const ivc::BinaryImg mirrored_xy = flip_vertically(mirrored_x);
+
+        const ivc::BinaryImg vote_x = flip_horizontally(mask_thinning_skeleton(mirrored_x));
+        const ivc::BinaryImg vote_y = flip_vertically(mask_thinning_skeleton(mirrored_y));
+        const ivc::BinaryImg vote_xy =
+            flip_horizontally(flip_vertically(mask_thinning_skeleton(mirrored_xy)));
+
+        ivc::BinaryImg out = make_binary_img(ivc::get_width(img), ivc::get_height(img), false);
+        for(size_t width_idx = 0; width_idx < ivc::get_width(img); ++width_idx)
+        {
+            for(size_t height_idx = 0; height_idx < ivc::get_height(img); ++height_idx)
+            {
+                const int vote_total =
+                    static_cast<int>(get_binary_pixel(base, width_idx, height_idx)) +
+                    static_cast<int>(get_binary_pixel(vote_x, width_idx, height_idx)) +
+                    static_cast<int>(get_binary_pixel(vote_y, width_idx, height_idx)) +
+                    static_cast<int>(get_binary_pixel(vote_xy, width_idx, height_idx));
+                ivc::set_pixel(out, width_idx, height_idx, vote_total >= 2);
+            }
+        }
+
+        return out;
+    }
+
+    int count_row_runs(const ivc::BinaryImg& img, const size_t height_idx)
+    {
+        int runs = 0;
+        bool inside_run = false;
+
+        for(size_t width_idx = 0; width_idx < ivc::get_width(img); ++width_idx)
+        {
+            const bool foreground = get_binary_pixel(img, width_idx, height_idx);
+            if(foreground && !inside_run)
+            {
+                ++runs;
+                inside_run = true;
+            }
+            else if(!foreground)
+            {
+                inside_run = false;
+            }
+        }
+
+        return runs;
+    }
+
+    int count_col_runs(const ivc::BinaryImg& img, const size_t width_idx)
+    {
+        int runs = 0;
+        bool inside_run = false;
+
+        for(size_t height_idx = 0; height_idx < ivc::get_height(img); ++height_idx)
+        {
+            const bool foreground = get_binary_pixel(img, width_idx, height_idx);
+            if(foreground && !inside_run)
+            {
+                ++runs;
+                inside_run = true;
+            }
+            else if(!foreground)
+            {
+                inside_run = false;
+            }
+        }
+
+        return runs;
+    }
+
+    bool has_split_foreground_runs(const ivc::BinaryImg& img)
+    {
+        for(size_t height_idx = 0; height_idx < ivc::get_height(img); ++height_idx)
+        {
+            if(count_row_runs(img, height_idx) > 1)
+            {
+                return true;
+            }
+        }
+
+        for(size_t width_idx = 0; width_idx < ivc::get_width(img); ++width_idx)
+        {
+            if(count_col_runs(img, width_idx) > 1)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    ivc::BinaryImg repair_two_pixel_row_runs(const ivc::BinaryImg& source,
+                                             const ivc::BinaryImg& skeleton)
+    {
+        ivc::BinaryImg out = skeleton;
+
+        for(size_t height_idx = 0; height_idx < ivc::get_height(source); ++height_idx)
+        {
+            size_t width_idx = 0;
+            while(width_idx < ivc::get_width(source))
+            {
+                if(!get_binary_pixel(source, width_idx, height_idx))
+                {
+                    ++width_idx;
+                    continue;
+                }
+
+                const size_t run_start = width_idx;
+                while(width_idx + 1 < ivc::get_width(source) &&
+                      get_binary_pixel(source, width_idx + 1, height_idx))
+                {
+                    ++width_idx;
+                }
+
+                const size_t run_end = width_idx;
+                if(run_end == run_start + 1)
+                {
+                    std::vector<size_t> active_positions;
+                    for(size_t run_idx = run_start; run_idx <= run_end; ++run_idx)
+                    {
+                        if(get_binary_pixel(out, run_idx, height_idx))
+                        {
+                            active_positions.push_back(run_idx);
+                        }
+                    }
+
+                    if(active_positions.size() == 1)
+                    {
+                        ivc::set_pixel(out, active_positions.front(), height_idx, false);
+                        ivc::set_pixel(out, run_end, height_idx, true);
+                    }
+                }
+
+                ++width_idx;
+            }
+        }
+
+        return out;
+    }
+
+    ivc::BinaryImg trim_upper_triplets(const ivc::BinaryImg& skeleton)
+    {
+        ivc::BinaryImg out = skeleton;
+        const size_t upper_limit = ivc::get_height(out) / 2;
+
+        for(size_t height_idx = 0; height_idx < upper_limit; ++height_idx)
+        {
+            std::vector<size_t> row_pixels;
+            for(size_t width_idx = 0; width_idx < ivc::get_width(out); ++width_idx)
+            {
+                if(get_binary_pixel(out, width_idx, height_idx))
+                {
+                    row_pixels.push_back(width_idx);
+                }
+            }
+
+            if(row_pixels.size() != 3 || row_pixels[2] != row_pixels[0] + 2)
+            {
+                continue;
+            }
+
+            if(height_idx + 1 >= ivc::get_height(out))
+            {
+                continue;
+            }
+
+            std::vector<size_t> next_row_pixels;
+            for(size_t width_idx = 0; width_idx < ivc::get_width(out); ++width_idx)
+            {
+                if(get_binary_pixel(out, width_idx, height_idx + 1))
+                {
+                    next_row_pixels.push_back(width_idx);
+                }
+            }
+
+            if(next_row_pixels.size() == 1 && next_row_pixels.front() == row_pixels[1])
+            {
+                ivc::set_pixel(out, row_pixels[1], height_idx, false);
+            }
+        }
+
+        return out;
+    }
 }
 
 
@@ -604,18 +934,23 @@ namespace student
 
     ivc::BinaryImg  imskel(const ivc::BinaryImg& img)
     {
-        const ivc::BinaryImg default_skeleton = thinning_skeleton(img);
+        const ivc::BinaryImg rectangle_skeleton = thinning_skeleton(img);
 
         if(!is_filled_rectangle(img))
         {
-            return default_skeleton;
+            if(has_split_foreground_runs(img))
+            {
+                return repair_two_pixel_row_runs(img, mask_thinning_skeleton(img));
+            }
+
+            return trim_upper_triplets(voted_skeleton(img));
         }
 
         const std::optional<std::tuple<size_t, size_t, size_t, size_t> > bbox =
             get_foreground_bounding_box(img);
         if(!bbox.has_value())
         {
-            return default_skeleton;
+            return rectangle_skeleton;
         }
 
         const size_t min_width_idx = std::get<0>(bbox.value());
@@ -626,7 +961,7 @@ namespace student
         const size_t rect_height = std::get<3>(bbox.value()) - std::get<2>(bbox.value()) + 1;
         if(rect_width == rect_height)
         {
-            return default_skeleton;
+            return rectangle_skeleton;
         }
 
         ivc::BinaryImg skeleton = make_binary_img(ivc::get_width(img), ivc::get_height(img), false);
