@@ -3,6 +3,8 @@ project( hough )
 set( BASE_ROOT ${CMAKE_CURRENT_SOURCE_DIR} )
 set( INC_ROOT ${BASE_ROOT}/include )
 set( CSRC_ROOT ${BASE_ROOT}/csrc )
+set( PA2_ROOT ${BASE_ROOT}/../pa2_libs)
+
 include_directories( ${INC_ROOT} )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -15,7 +17,7 @@ find_package(GTest REQUIRED)
 
 
 # find CannyLibs libraries
-list( APPEND CMAKE_MODULE_PATH $ENV{PA2_ROOT}/cmake/modules)
+list( APPEND CMAKE_MODULE_PATH ${PA2_ROOT}/cmake/modules)
 find_package( HoughLibs REQUIRED )
 include_directories( ${HoughLibs_INCLUDE_DIR} )
 
