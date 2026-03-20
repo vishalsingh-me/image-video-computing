@@ -50,6 +50,7 @@ namespace student
                             const ivc::StructureElement& se);
     ivc::BinaryImg  imgrad(const ivc::BinaryImg& img,
                            const ivc::StructureElement& se);
+    ivc::BinaryImg  imskel(const ivc::BinaryImg& img);
     ivc::BinaryImg  imskel(const ivc::BinaryImg& img,
                            const ivc::StructureElement& se);
 
@@ -58,4 +59,3 @@ namespace student
 
 
 #endif // end of _HOUGH_MORPHOLOGY_H_
-

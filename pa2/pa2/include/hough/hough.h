@@ -3,6 +3,7 @@
 #define _HOUGH_HOUGH_H_
 
 // SYSTEM INCLUDES
+#include <map>                      // std::map
 #include <set>                      // std::set
 #include <tuple>                    // std::tuple
 #include <585/common/types.h>
@@ -56,7 +57,7 @@ namespace student
         RTable(ivc::BinaryImg& obj_img);     // the image containing the object
 
         // for a specific gradient angle phi return the potential (r, theta) values
-        std::set<std::tuple<float_t, float_t> > get_r_theta_values(const float_t phi);
+        std::set<std::tuple<float_t, float_t> > get_r_theta_values(const float_t phi) const;
 
         // TODO: whatever public fields/methods you want
 
@@ -64,7 +65,9 @@ namespace student
         const ivc::BinaryImg                _obj_img;
         const std::tuple<size_t, size_t>    _obj_img_center_idxs;   // the "center" of the object
 
-        // TODO: whatever private fields/methods you want
+        std::map<int, std::set<std::tuple<float_t, float_t> > > _phi_to_r_theta_values;
+
+        static int quantize_phi(const float_t phi);
     };
 
     // generalized hough transform
@@ -93,4 +96,3 @@ namespace student
 
 
 #endif // end of _HOUGH_HOUGH_H_
-
