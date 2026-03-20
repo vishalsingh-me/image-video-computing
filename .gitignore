@@ -8,6 +8,3 @@ cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
 compile_commands.json
-
-# Keep the existing nested repository separate from this repo
-pa1/
