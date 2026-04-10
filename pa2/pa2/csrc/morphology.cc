@@ -17,8 +17,6 @@
 
 namespace
 {
-    constexpr float_t kEps = 1e-6f;
-
     bool get_binary_pixel(const ivc::BinaryImg& img,
                           const size_t width_idx,
                           const size_t height_idx)
@@ -692,7 +690,7 @@ namespace student
             {
                 const float_t dx = std::abs(static_cast<float_t>(width_idx) - center);
                 const float_t dy = std::abs(static_cast<float_t>(height_idx) - center);
-                if(dx + dy <= radius + kEps)
+                if(dx + dy <= radius + 1e-6f)
                 {
                     ivc::set_pixel(se, width_idx, height_idx, ivc::FOREGROUND);
                 }
@@ -720,7 +718,7 @@ namespace student
             {
                 const float_t dx = std::abs(static_cast<float_t>(width_idx) - center);
                 const float_t dy = std::abs(static_cast<float_t>(height_idx) - center);
-                if(dx <= half_thickness + kEps || dy <= half_thickness + kEps)
+                if(dx <= half_thickness + 1e-6f || dy <= half_thickness + 1e-6f)
                 {
                     ivc::set_pixel(se, width_idx, height_idx, ivc::FOREGROUND);
                 }
@@ -747,7 +745,7 @@ namespace student
             {
                 const float_t dx = static_cast<float_t>(width_idx) - center;
                 const float_t dy = static_cast<float_t>(height_idx) - center;
-                if(std::hypot(dx, dy) <= radius + kEps)
+                if(std::hypot(dx, dy) <= radius + 1e-6f)
                 {
                     ivc::set_pixel(se, width_idx, height_idx, ivc::FOREGROUND);
                 }

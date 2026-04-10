@@ -1,1 +1,0 @@
-# image-video-computing

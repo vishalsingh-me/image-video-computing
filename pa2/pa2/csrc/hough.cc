@@ -19,11 +19,6 @@
 
 namespace
 {
-    constexpr float_t kPi = 3.14159265358979323846f;
-    constexpr float_t kTwoPi = 2.0f * kPi;
-    constexpr float_t kDegreesPerCircle = 360.0f;
-    constexpr float_t kSnapEps = 1e-4f;
-
     bool get_binary_pixel(const ivc::BinaryImg& img,
                           const size_t width_idx,
                           const size_t height_idx)
@@ -98,24 +93,24 @@ namespace
 
     float_t degrees_to_radians(const float_t degrees)
     {
-        return degrees * kPi / 180.0f;
+        return degrees * 3.14159265358979323846f / 180.0f;
     }
 
     float_t radians_to_degrees(const float_t radians)
     {
-        return radians * 180.0f / kPi;
+        return radians * 180.0f / 3.14159265358979323846f;
     }
 
     float_t normalize_angle_degrees(float_t angle)
     {
         while(angle < 0.0f)
         {
-            angle += kDegreesPerCircle;
+            angle += 360.0f;
         }
 
-        while(angle >= kDegreesPerCircle)
+        while(angle >= 360.0f)
         {
-            angle -= kDegreesPerCircle;
+            angle -= 360.0f;
         }
 
         return angle;
@@ -125,12 +120,12 @@ namespace
     {
         while(angle < 0.0f)
         {
-            angle += kTwoPi;
+            angle += 6.28318530717958647692f;
         }
 
-        while(angle >= kTwoPi)
+        while(angle >= 6.28318530717958647692f)
         {
-            angle -= kTwoPi;
+            angle -= 6.28318530717958647692f;
         }
 
         return angle;
@@ -146,7 +141,7 @@ namespace
 
         if(range.rows() == 1)
         {
-            if(std::abs(value - range(0)) <= kSnapEps)
+            if(std::abs(value - range(0)) <= 1e-4f)
             {
                 return range(0);
             }
@@ -163,7 +158,7 @@ namespace
         }
 
         const float_t snapped_value = range(snapped_idx);
-        if(std::abs(value - snapped_value) > kSnapEps)
+        if(std::abs(value - snapped_value) > 1e-4f)
         {
             return std::nullopt;
         }
@@ -202,14 +197,13 @@ namespace
 
     int quantize_phi_bin(float_t phi)
     {
-        if(std::abs(phi) > (kTwoPi + 1.0f))
+        if(std::abs(phi) > 7.28318530717958647692f)
         {
             phi = degrees_to_radians(phi);
         }
 
         const float_t normalized_phi = normalize_angle_radians(phi);
-        return static_cast<int>(std::lround(radians_to_degrees(normalized_phi))) %
-               static_cast<int>(kDegreesPerCircle);
+        return static_cast<int>(std::lround(radians_to_degrees(normalized_phi))) % 360;
     }
 }
 
@@ -384,12 +378,12 @@ namespace student
                                         const float_t dy = static_cast<float_t>(height_idx) - y_center;
                                         const float_t dy_sq = dy * dy;
 
-                                        if(std::abs(dx) <= kSnapEps && std::abs(dy) <= kSnapEps)
+                                        if(std::abs(dx) <= 1e-4f && std::abs(dy) <= 1e-4f)
                                         {
                                             continue;
                                         }
 
-                                        if(std::abs(dy) <= kSnapEps)
+                                        if(std::abs(dy) <= 1e-4f)
                                         {
                                             const std::optional<float_t> snapped_x_stretch =
                                                 snap_to_range(x_stretch_range, std::abs(dx));
@@ -416,7 +410,7 @@ namespace student
                                             const float_t x_stretch_sq = x_stretch * x_stretch;
                                             const float_t denom = 1.0f - (dx_sq / x_stretch_sq);
 
-                                            if(denom <= kSnapEps)
+                                            if(denom <= 1e-4f)
                                             {
                                                 continue;
                                             }
@@ -465,7 +459,8 @@ namespace student
                 const float_t dx = center_x - static_cast<float_t>(width_idx);
                 const float_t dy = center_y - static_cast<float_t>(height_idx);
                 const float_t r = std::hypot(dx, dy);
-                const float_t theta = normalize_angle_degrees(std::atan2(dy, dx) * 180.0f / kPi);
+                const float_t theta = normalize_angle_degrees(
+                    std::atan2(dy, dx) * 180.0f / 3.14159265358979323846f);
 
                 _phi_to_r_theta_values[quantize_phi(phi)].insert(std::make_tuple(r, theta));
             }

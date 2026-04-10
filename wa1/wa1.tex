@@ -1,0 +1,251 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsfonts}
+%\usepackage{geometry}
+\usepackage[paper=a4paper, 
+            left=20.0mm, right=20.0mm, 
+            top=25.0mm, bottom=25.0mm]{geometry}
+\pagestyle{empty}
+\usepackage{fancyhdr}
+\usepackage[dvipsnames]{xcolor}
+\definecolor{darkblue}{rgb}{0,0,.6}
+\definecolor{darkred}{rgb}{.7,0,0}
+\definecolor{darkgreen}{rgb}{0,.6,0}
+\definecolor{red}{rgb}{.98,0,0}
+\usepackage[colorlinks,pagebackref,pdfusetitle,urlcolor=darkblue,citecolor=darkblue,linkcolor=darkred,bookmarksnumbered,plainpages=false]{hyperref}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+\pagestyle{fancyplain}
+\fancyhf{}
+\setlength{\headheight}{14pt}
+\lhead{ \fancyplain{}{CS585: Image and Video Computing} }
+%\chead{ \fancyplain{}{} }
+\rhead{ \fancyplain{}{\today} }
+%\rfoot{\fancyplain{}{page \thepage\ of \pageref{LastPage}}}
+\fancyfoot[R] {Page \thepage}
+\thispagestyle{plain}
+
+\usepackage{amsthm, amsmath}
+\usepackage{array, longtable}
+\usepackage{amssymb}
+
+\newcommand{\question}[1]{\section*{\normalsize #1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newenvironment{twocolproof}
+{
+\renewcommand{\arraystretch}{1.35}
+\begin{longtable}{|L{0.60\textwidth}|L{0.30\textwidth}|}
+\hline
+\textbf{Mathematical Steps} & \textbf{Justification} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Mathematical Steps} & \textbf{Justification} \\
+\hline
+\endhead
+\hline
+\multicolumn{2}{r}{\textit{Continued on next page}}\\
+\endfoot
+\hline
+\endlastfoot
+}
+{
+\end{longtable}
+}
+
+
+\begin{document}
+\begin{center}
+    {\Large \textsc{Written Assignment 1}}
+\end{center}
+\begin{center}
+    Due: Friday 03/27/2026 at 11:59pm EST
+\end{center}
+\begin{center}
+    Vishal Singh\\
+    BU ID: U36704631
+\end{center}
+
+\section*{\textbf{Disclaimer}}
+%I encourage you to work together, I am a firm believer that we are at our best (and learn better) when we communicate with our peers. Perspective is incredibly important when it comes to solving problems, and sometimes it takes talking to other humans (or rubber ducks in the case of programmers) to gain a perspective we normally would not be able to achieve on our own. The only thing I ask is that you report who you work with: this is \textbf{not} to punish anyone, but instead will help me figure out what topics I need to spend extra time on/who to help. When you turn in your solution (please use some form of typesetting: do \textbf{NOT} turn in handwritten solutions), please note who you worked with.\newline
+Written assignments must be typeset in \LaTeX. I have released the \texttt{.tex} files that were used to generate this pdf which you are welcome to use as the foundation of your solutions. These questions are \textbf{proof} questions, meaning that you will need to write a two-column proof with mathematical steps on the left column, and english justification on the right column. Show all of your steps.\newline\newline
+
+\noindent Note that you are \textbf{NOT} allowed to use any help from LLMs, online solutions, old solutions, etc. when solving these problems. Your solutions are your own. You \textbf{are} allowed to chat with your classmates, but not with detail granular enough to copy each others work.
+
+
+
+\question{Question 1: Useful Convolution Properties (30 points)}
+Consider the convolution between two 1-dimensional functions $f$ and $g$:
+$$h(t):= (f*g)(t)=\int\limits_{-\infty}^{+\infty} f(x)g(t-x)\,dx$$
+Please show:
+\begin{enumerate}
+    \item $f*g = g*f$
+    \item $f*(g*h) = (f*g)*h$
+    \item $f*(g+h) = (f*g) + (f*h)$
+    \item $\frac{d}{dt}(f*g) = (\frac{d}{dt}f)*g$ and $\frac{d}{dt}(f*g) =f*(\frac{d}{dt}g)$
+\end{enumerate}
+\noindent\textbf{Assumption.} Throughout Question 1, assume the integrals converge absolutely and that the functions are regular enough for substitutions, Fubini's theorem, and differentiation under the integral sign to be valid.
+
+\subsection*{1.1 \texorpdfstring{$f*g=g*f$}{f*g=g*f}}
+\begin{twocolproof}
+\(\displaystyle (f*g)(t)=\int_{-\infty}^{+\infty} f(x)g(t-x)\,dx\) & Definition of convolution. \\
+\(\displaystyle (f*g)(t)=\int_{+\infty}^{-\infty} f(t-y)g(y)(-dy)\) & Substitute \(y=t-x\), so \(x=t-y\) and \(dx=-dy\). \\
+\(\displaystyle (f*g)(t)=\int_{-\infty}^{+\infty} g(y)f(t-y)\,dy\) & Reverse the limits and reorder the factors. \\
+\(\displaystyle (f*g)(t)=(g*f)(t)\) & Definition of convolution again. \\
+\end{twocolproof}
+
+\subsection*{1.2 \texorpdfstring{$f*(g*h)=(f*g)*h$}{f*(g*h)=(f*g)*h}}
+\begin{twocolproof}
+\(\displaystyle (f*(g*h))(t)=\int_{-\infty}^{+\infty} f(x)(g*h)(t-x)\,dx\) & Definition of convolution. \\
+\(\displaystyle (f*(g*h))(t)=\int_{-\infty}^{+\infty} f(x)\left[\int_{-\infty}^{+\infty} g(y)h((t-x)-y)\,dy\right]dx\) & Expand \((g*h)(t-x)\). \\
+\(\displaystyle (f*(g*h))(t)=\int_{-\infty}^{+\infty} f(x)\left[\int_{-\infty}^{+\infty} g(z-x)h(t-z)\,dz\right]dx\) & In the inner integral, substitute \(z=x+y\), so \(y=z-x\) and \(dy=dz\). \\
+\(\displaystyle (f*(g*h))(t)=\int_{-\infty}^{+\infty}\left[\int_{-\infty}^{+\infty} f(x)g(z-x)\,dx\right]h(t-z)\,dz\) & Apply Fubini's theorem and regroup the terms. \\
+\(\displaystyle (f*(g*h))(t)=\int_{-\infty}^{+\infty}(f*g)(z)h(t-z)\,dz\) & Definition of \((f*g)(z)\). \\
+\(\displaystyle (f*(g*h))(t)=((f*g)*h)(t)\) & Definition of convolution. \\
+\end{twocolproof}
+
+\subsection*{1.3 \texorpdfstring{$f*(g+h)=(f*g)+(f*h)$}{f*(g+h)=(f*g)+(f*h)}}
+\begin{twocolproof}
+\(\displaystyle (f*(g+h))(t)=\int_{-\infty}^{+\infty} f(x)(g+h)(t-x)\,dx\) & Definition of convolution. \\
+\(\displaystyle (f*(g+h))(t)=\int_{-\infty}^{+\infty} f(x)\big(g(t-x)+h(t-x)\big)\,dx\) & Definition of pointwise addition. \\
+\(\displaystyle (f*(g+h))(t)=\int_{-\infty}^{+\infty} f(x)g(t-x)\,dx+\int_{-\infty}^{+\infty} f(x)h(t-x)\,dx\) & Linearity of the integral. \\
+\(\displaystyle (f*(g+h))(t)=(f*g)(t)+(f*h)(t)\) & Definition of convolution. \\
+\end{twocolproof}
+
+\subsection*{1.4 \texorpdfstring{$\frac{d}{dt}(f*g)=(f'*g)=f*g'$}{d/dt(f*g)=(f'*g)=f*g'}}
+\begin{twocolproof}
+\(\displaystyle \frac{d}{dt}(f*g)(t)=\frac{d}{dt}\int_{-\infty}^{+\infty} f(x)g(t-x)\,dx\) & Start from the convolution formula. \\
+\(\displaystyle \frac{d}{dt}(f*g)(t)=\int_{-\infty}^{+\infty} f(x)\frac{d}{dt}g(t-x)\,dx\) & Differentiate under the integral sign. \\
+\(\displaystyle \frac{d}{dt}(f*g)(t)=\int_{-\infty}^{+\infty} f(x)g'(t-x)\,dx=(f*g')(t)\) & Since \(\frac{d}{dt}g(t-x)=g'(t-x)\). \\
+\(\displaystyle (f*g)(t)=\int_{-\infty}^{+\infty} g(y)f(t-y)\,dy\) & Rewrite the convolution in the commuted form from part 1.1. \\
+\(\displaystyle \frac{d}{dt}(f*g)(t)=\int_{-\infty}^{+\infty} g(y)\frac{d}{dt}f(t-y)\,dy\) & Differentiate under the integral sign again. \\
+\(\displaystyle \frac{d}{dt}(f*g)(t)=\int_{-\infty}^{+\infty} g(y)f'(t-y)\,dy=(f'*g)(t)\) & Since \(\frac{d}{dt}f(t-y)=f'(t-y)\). \\
+\(\displaystyle \therefore\ \frac{d}{dt}(f*g)=(f'*g)=f*g'\) & Both required identities hold. \\
+\end{twocolproof}
+\newpage
+
+
+
+
+
+
+
+
+\question{Question 2: Useful Laplace Transform Properties (35 points)}
+Before we start considering the Fourier transform of a function $f(t)$, an easier transform is called the \textit{Laplace} transform. It is defined as follows:
+$$F(s) = \mathcal{L}\{f(t)\}:=\int\limits_{0}^{+\infty} f(t)e^{-st}dt$$
+Please show:
+\begin{enumerate}
+    \item $\mathcal{L}\{f+g\} = \mathcal{L}\{f\}+\mathcal{L}\{g\}$
+    \item $\mathcal{L}\{\frac{d^n}{dt^n}f(t)\} = s^n\mathcal{L}\{f(t)\}-\sum\limits_{i=1}^n s^{n-i}\Big(\frac{d^{i-1}}{dt^{i-1}}f(t)\Big) \bigg\rvert_{t=0}$ where $f\rvert_{c} := f(c)$ and $\frac{d^0}{dx^0}f(x) := f(x)$.
+    \item $\frac{d^n}{ds^n}\mathcal{L}\{f(t)\} = (-1)^{n}\mathcal{L}\{t^n f(t)\}$.
+    \item for two functions $f$ and $g$ show that $\mathcal{L}\{f\}\mathcal{L}\{g\} = \mathcal{L}\{f*g\}$
+\end{enumerate}
+\noindent\textbf{Assumption.} Throughout Question 2, assume \(f\), \(g\), and the required derivatives are of exponential order so the Laplace transforms exist, the boundary terms \(\lim_{t\to+\infty} e^{-st}f^{(k)}(t)\) vanish, and differentiation under the integral sign is valid. For part 2.4, use the standard causal convolution
+\[
+(f*g)(t):=\int_{0}^{t} f(\tau)g(t-\tau)\,d\tau,
+\]
+which is the same as the full-line convolution when \(f\) and \(g\) are zero for \(t<0\).
+
+\subsection*{2.1 \texorpdfstring{$\mathcal{L}\{f+g\}=\mathcal{L}\{f\}+\mathcal{L}\{g\}$}{L{f+g}=L{f}+L{g}}}
+\begin{twocolproof}
+\(\displaystyle \mathcal{L}\{f+g\}=\int_{0}^{+\infty}(f(t)+g(t))e^{-st}\,dt\) & Definition of the Laplace transform. \\
+\(\displaystyle \mathcal{L}\{f+g\}=\int_{0}^{+\infty} f(t)e^{-st}\,dt+\int_{0}^{+\infty} g(t)e^{-st}\,dt\) & Linearity of the integral. \\
+\(\displaystyle \mathcal{L}\{f+g\}=\mathcal{L}\{f\}+\mathcal{L}\{g\}\) & Definition of \(\mathcal{L}\). \\
+\end{twocolproof}
+
+\subsection*{2.2 \texorpdfstring{$\mathcal{L}\{f^{(n)}\}=s^n\mathcal{L}\{f\}-\sum_{i=1}^n s^{n-i}f^{(i-1)}(0)$}{Derivative rule for the Laplace transform}}
+\begin{twocolproof}
+\(\displaystyle \mathcal{L}\{f'(t)\}=\int_{0}^{+\infty} f'(t)e^{-st}\,dt\) & Start with the case \(n=1\). \\
+\(\displaystyle \mathcal{L}\{f'(t)\}=\Big[f(t)e^{-st}\Big]_{0}^{+\infty}+s\int_{0}^{+\infty} f(t)e^{-st}\,dt\) & Integration by parts with \(u=e^{-st}\), \(dv=f'(t)\,dt\). \\
+\(\displaystyle \mathcal{L}\{f'(t)\}=s\mathcal{L}\{f(t)\}-f(0)\) & The term at \(+\infty\) vanishes, and \(\big[f(t)e^{-st}\big]_0^{+\infty}=0-f(0)\). \\
+\(\displaystyle \mathcal{L}\{f^{(n)}(t)\}=s^n\mathcal{L}\{f(t)\}-\sum_{i=1}^{n} s^{n-i}f^{(i-1)}(0)\) & Induction hypothesis. \\
+\(\displaystyle \mathcal{L}\{f^{(n+1)}(t)\}=\mathcal{L}\{(f^{(n)}(t))'\}=s\mathcal{L}\{f^{(n)}(t)\}-f^{(n)}(0)\) & Apply the \(n=1\) result to the function \(f^{(n)}\). \\
+\(\displaystyle \mathcal{L}\{f^{(n+1)}(t)\}=s\left[s^n\mathcal{L}\{f(t)\}-\sum_{i=1}^{n} s^{n-i}f^{(i-1)}(0)\right]-f^{(n)}(0)\) & Substitute the induction hypothesis. \\
+\(\displaystyle \mathcal{L}\{f^{(n+1)}(t)\}=s^{n+1}\mathcal{L}\{f(t)\}-\sum_{i=1}^{n} s^{n+1-i}f^{(i-1)}(0)-f^{(n)}(0)\) & Distribute the factor \(s\). \\
+\(\displaystyle \mathcal{L}\{f^{(n+1)}(t)\}=s^{n+1}\mathcal{L}\{f(t)\}-\sum_{i=1}^{n+1} s^{n+1-i}f^{(i-1)}(0)\) & Absorb the last term into the sum as the \(i=n+1\) term. \\
+\(\displaystyle \therefore\ \mathcal{L}\{f^{(n)}(t)\}=s^n\mathcal{L}\{f(t)\}-\sum_{i=1}^{n} s^{n-i}f^{(i-1)}(0)\) & The statement holds for all \(n\ge 1\) by induction. \\
+\end{twocolproof}
+
+\subsection*{2.3 \texorpdfstring{$\frac{d^n}{ds^n}\mathcal{L}\{f\}=(-1)^n\mathcal{L}\{t^n f\}$}{Differentiation with respect to s}}
+\begin{twocolproof}
+\(\displaystyle \frac{d^n}{ds^n}\mathcal{L}\{f(t)\}=\frac{d^n}{ds^n}\int_{0}^{+\infty} f(t)e^{-st}\,dt\) & Start from the definition of \(\mathcal{L}\). \\
+\(\displaystyle \frac{d^n}{ds^n}\mathcal{L}\{f(t)\}=\int_{0}^{+\infty} f(t)\frac{\partial^n}{\partial s^n}e^{-st}\,dt\) & Differentiate under the integral sign. \\
+\(\displaystyle \frac{d^n}{ds^n}\mathcal{L}\{f(t)\}=\int_{0}^{+\infty} f(t)(-t)^n e^{-st}\,dt\) & \(\frac{\partial^n}{\partial s^n}e^{-st}=(-t)^n e^{-st}\). \\
+\(\displaystyle \frac{d^n}{ds^n}\mathcal{L}\{f(t)\}=(-1)^n\int_{0}^{+\infty} t^n f(t)e^{-st}\,dt\) & Factor out \((-1)^n\). \\
+\(\displaystyle \frac{d^n}{ds^n}\mathcal{L}\{f(t)\}=(-1)^n\mathcal{L}\{t^n f(t)\}\) & Definition of the Laplace transform. \\
+\end{twocolproof}
+
+\subsection*{2.4 \texorpdfstring{$\mathcal{L}\{f\}\mathcal{L}\{g\}=\mathcal{L}\{f*g\}$}{Laplace convolution theorem}}
+\begin{twocolproof}
+\(\displaystyle \mathcal{L}\{f\}\mathcal{L}\{g\}=\left(\int_{0}^{+\infty} f(\tau)e^{-s\tau}\,d\tau\right)\left(\int_{0}^{+\infty} g(\sigma)e^{-s\sigma}\,d\sigma\right)\) & Write both Laplace transforms from the definition. \\
+\(\displaystyle \mathcal{L}\{f\}\mathcal{L}\{g\}=\int_{0}^{+\infty}\int_{0}^{+\infty} f(\tau)g(\sigma)e^{-s(\tau+\sigma)}\,d\sigma\,d\tau\) & Multiply the integrals and combine them using Fubini's theorem. \\
+\(\displaystyle \mathcal{L}\{f\}\mathcal{L}\{g\}=\int_{0}^{+\infty}\int_{\tau}^{+\infty} f(\tau)g(t-\tau)e^{-st}\,dt\,d\tau\) & Substitute \(t=\tau+\sigma\), so \(\sigma=t-\tau\) and \(d\sigma=dt\). \\
+\(\displaystyle \mathcal{L}\{f\}\mathcal{L}\{g\}=\int_{0}^{+\infty} e^{-st}\left[\int_{0}^{t} f(\tau)g(t-\tau)\,d\tau\right]dt\) & Swap the order of integration over the region \(0\le \tau \le t <+\infty\). \\
+\(\displaystyle \mathcal{L}\{f\}\mathcal{L}\{g\}=\int_{0}^{+\infty} (f*g)(t)e^{-st}\,dt\) & The bracketed term is exactly the causal convolution \((f*g)(t)\). \\
+\(\displaystyle \mathcal{L}\{f\}\mathcal{L}\{g\}=\mathcal{L}\{f*g\}\) & Definition of the Laplace transform. \\
+\end{twocolproof}
+\newpage
+
+
+
+
+
+
+
+\question{Question 3: Useful Fourier Transform Properties (35 points)}
+Now considering the Fourier transform of a function $f(t)$:
+$$F(u) = \mathcal{F}\{f(t)\}:=\int\limits_{-\infty}^{+\infty} f(t)e^{-iut}dt$$
+and its inverse transform:
+$$f(t) = \mathcal{F}^{-1}\{F(u)\} := \frac{1}{2\pi}\int\limits_{-\infty}^{+\infty}F(u)e^{iut}dt$$
+Please show:
+\begin{enumerate}
+    \item $\mathcal{F}\{f+g\} = \mathcal{F}\{f\}+\mathcal{F}\{g\}$
+    \item $\mathcal{F}\{\frac{d^n}{dt^n}f(t)\} = (iu)^n\mathcal{F}\{f(t)\}$.
+    \item $\frac{d^n}{du^n}\mathcal{F}\{f(t)\} = (-i)^{n}\mathcal{F}\{t^n f(t)\}$.
+    \item for two functions $f$ and $g$ show that $\mathcal{F}\{f\}\mathcal{F}\{g\} = \mathcal{F}\{f*g\}$
+\end{enumerate}
+\noindent\textbf{Assumption.} Throughout Question 3, assume the functions and required derivatives are absolutely integrable, the boundary terms \(\lim_{t\to\pm\infty} f^{(k)}(t)e^{-iut}\) vanish, and Fubini's theorem plus differentiation under the integral sign may be used.
+
+\subsection*{3.1 \texorpdfstring{$\mathcal{F}\{f+g\}=\mathcal{F}\{f\}+\mathcal{F}\{g\}$}{F{f+g}=F{f}+F{g}}}
+\begin{twocolproof}
+\(\displaystyle \mathcal{F}\{f+g\}=\int_{-\infty}^{+\infty}(f(t)+g(t))e^{-iut}\,dt\) & Definition of the Fourier transform. \\
+\(\displaystyle \mathcal{F}\{f+g\}=\int_{-\infty}^{+\infty} f(t)e^{-iut}\,dt+\int_{-\infty}^{+\infty} g(t)e^{-iut}\,dt\) & Linearity of the integral. \\
+\(\displaystyle \mathcal{F}\{f+g\}=\mathcal{F}\{f\}+\mathcal{F}\{g\}\) & Definition of \(\mathcal{F}\). \\
+\end{twocolproof}
+
+\subsection*{3.2 \texorpdfstring{$\mathcal{F}\{f^{(n)}\}=(iu)^n\mathcal{F}\{f\}$}{Derivative rule for the Fourier transform}}
+\begin{twocolproof}
+\(\displaystyle \mathcal{F}\{f'(t)\}=\int_{-\infty}^{+\infty} f'(t)e^{-iut}\,dt\) & Start with the case \(n=1\). \\
+\(\displaystyle \mathcal{F}\{f'(t)\}=\Big[f(t)e^{-iut}\Big]_{-\infty}^{+\infty}+iu\int_{-\infty}^{+\infty} f(t)e^{-iut}\,dt\) & Integration by parts with \(u=e^{-iut}\), \(dv=f'(t)\,dt\). \\
+\(\displaystyle \mathcal{F}\{f'(t)\}=iu\,\mathcal{F}\{f(t)\}\) & The boundary term vanishes at \(t=\pm\infty\). \\
+\(\displaystyle \mathcal{F}\{f^{(n)}(t)\}=(iu)^n\mathcal{F}\{f(t)\}\) & Induction hypothesis. \\
+\(\displaystyle \mathcal{F}\{f^{(n+1)}(t)\}=\mathcal{F}\{(f^{(n)}(t))'\}=iu\,\mathcal{F}\{f^{(n)}(t)\}\) & Apply the \(n=1\) result to the function \(f^{(n)}\). \\
+\(\displaystyle \mathcal{F}\{f^{(n+1)}(t)\}=iu\,(iu)^n\mathcal{F}\{f(t)\}=(iu)^{n+1}\mathcal{F}\{f(t)\}\) & Substitute the induction hypothesis and simplify. \\
+\(\displaystyle \therefore\ \mathcal{F}\{f^{(n)}(t)\}=(iu)^n\mathcal{F}\{f(t)\}\) & The statement holds for all \(n\ge 1\) by induction. \\
+\end{twocolproof}
+
+\subsection*{3.3 \texorpdfstring{$\frac{d^n}{du^n}\mathcal{F}\{f\}=(-i)^n\mathcal{F}\{t^n f\}$}{Differentiation with respect to u}}
+\begin{twocolproof}
+\(\displaystyle \frac{d^n}{du^n}\mathcal{F}\{f(t)\}=\frac{d^n}{du^n}\int_{-\infty}^{+\infty} f(t)e^{-iut}\,dt\) & Start from the definition of \(\mathcal{F}\). \\
+\(\displaystyle \frac{d^n}{du^n}\mathcal{F}\{f(t)\}=\int_{-\infty}^{+\infty} f(t)\frac{\partial^n}{\partial u^n}e^{-iut}\,dt\) & Differentiate under the integral sign. \\
+\(\displaystyle \frac{d^n}{du^n}\mathcal{F}\{f(t)\}=\int_{-\infty}^{+\infty} f(t)(-it)^n e^{-iut}\,dt\) & \(\frac{\partial^n}{\partial u^n}e^{-iut}=(-it)^n e^{-iut}\). \\
+\(\displaystyle \frac{d^n}{du^n}\mathcal{F}\{f(t)\}=(-i)^n\int_{-\infty}^{+\infty} t^n f(t)e^{-iut}\,dt\) & Factor out \((-i)^n\). \\
+\(\displaystyle \frac{d^n}{du^n}\mathcal{F}\{f(t)\}=(-i)^n\mathcal{F}\{t^n f(t)\}\) & Definition of the Fourier transform. \\
+\end{twocolproof}
+
+\subsection*{3.4 \texorpdfstring{$\mathcal{F}\{f\}\mathcal{F}\{g\}=\mathcal{F}\{f*g\}$}{Fourier convolution theorem}}
+\begin{twocolproof}
+\(\displaystyle \mathcal{F}\{f*g\}(u)=\int_{-\infty}^{+\infty} (f*g)(t)e^{-iut}\,dt\) & Start from the definition of the Fourier transform. \\
+\(\displaystyle \mathcal{F}\{f*g\}(u)=\int_{-\infty}^{+\infty}\left[\int_{-\infty}^{+\infty} f(\tau)g(t-\tau)\,d\tau\right]e^{-iut}\,dt\) & Expand the convolution. \\
+\(\displaystyle \mathcal{F}\{f*g\}(u)=\int_{-\infty}^{+\infty} f(\tau)\left[\int_{-\infty}^{+\infty} g(t-\tau)e^{-iut}\,dt\right]d\tau\) & Apply Fubini's theorem and move \(f(\tau)\) outside the inner integral. \\
+\(\displaystyle \mathcal{F}\{f*g\}(u)=\int_{-\infty}^{+\infty} f(\tau)\left[\int_{-\infty}^{+\infty} g(y)e^{-iu(y+\tau)}\,dy\right]d\tau\) & Substitute \(y=t-\tau\), so \(t=y+\tau\) and \(dt=dy\). \\
+\(\displaystyle \mathcal{F}\{f*g\}(u)=\int_{-\infty}^{+\infty} f(\tau)e^{-iu\tau}\left[\int_{-\infty}^{+\infty} g(y)e^{-iuy}\,dy\right]d\tau\) & Split the exponential \(e^{-iu(y+\tau)}\). \\
+\(\displaystyle \mathcal{F}\{f*g\}(u)=\mathcal{F}\{g\}(u)\int_{-\infty}^{+\infty} f(\tau)e^{-iu\tau}\,d\tau\) & The bracketed integral is \(\mathcal{F}\{g\}(u)\). \\
+\(\displaystyle \mathcal{F}\{f*g\}(u)=\mathcal{F}\{f\}(u)\mathcal{F}\{g\}(u)\) & The remaining integral is \(\mathcal{F}\{f\}(u)\). \\
+\end{twocolproof}
+\newpage
+
+
+
+\end{document}
