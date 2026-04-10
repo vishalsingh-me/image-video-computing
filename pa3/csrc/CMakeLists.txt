@@ -13,6 +13,11 @@ set( vbow_SRCS
 add_library( ${PROJECT_NAME}-vbow SHARED ${vbow_HEADERS} ${vbow_SRCS} )
 target_link_libraries( ${PROJECT_NAME}-vbow ${ImClsLibs_LIBRARIES} Eigen3::Eigen )
 
+add_executable( ${PROJECT_NAME}-vbow-mnist ${vbow_SRC_ROOT}/mnist_experiments.cc )
+target_link_libraries( ${PROJECT_NAME}-vbow-mnist
+                       ${PROJECT_NAME}-vbow
+                       ${ImClsLibs_LIBRARIES}
+                       Eigen3::Eigen )
+
 # tests
 add_subdirectory( ${vbow_SRC_ROOT}/test )
-

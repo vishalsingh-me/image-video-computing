@@ -5,6 +5,7 @@
 // SYSTEM INCLUDES
 #include <list>                 // std::list is a linked list
 #include <map>                  // std::map
+#include <vector>
 #include <585/common/types.h>
 #include <585/vbow/vbow.h>
 
@@ -26,6 +27,8 @@ namespace student
         Vocab();
 
         void add(const ivc::GrayscaleByteImg& e);
+        bool contains(const ivc::GrayscaleByteImg& e) const;
+        uint64_t get_idx(const ivc::GrayscaleByteImg& e) const;
         const size_t size() const;
         std::list<ivc::GrayscaleByteImg> ordered_elements() const;
 
@@ -91,6 +94,8 @@ namespace student
                    const float_t lr,
                    const size_t max_epochs);
     private:
+        std::vector<float_t> _labels;
+        std::vector<ivc::LogReg> _models;
 
     };
 
@@ -139,4 +144,3 @@ namespace student
 
 
 #endif // end of _VBOG_VBOG_H_
-
